@@ -325,7 +325,7 @@ const STK = { id: null, ax: 0, ay: 0, mag: 0 };
 })();
 cv.addEventListener('pointerdown', e => { audioInit(); KP.tap = true; const r = cv.getBoundingClientRect(); KP.tapX = (e.clientX - r.left) / r.width * W; KP.tapY = (e.clientY - r.top) / r.height * H; });
 function resize() {
-  const s = Math.min(innerWidth / W, innerHeight / H); cv.style.width = Math.floor(W * s) + 'px'; cv.style.height = Math.floor(H * s) + 'px';
+  cv.style.width = '100%'; cv.style.height = '100%';
 }
 addEventListener('resize', resize); resize();
 
