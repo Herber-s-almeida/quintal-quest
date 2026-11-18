@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b0a14">
 <title>Quintal Quest</title>
 <style>
 html,body{margin:0;height:100%;background:#0b0a14;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -19,23 +23,16 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block;backg
 #bp{right:calc(env(safe-area-inset-right) + 112px);bottom:46px;width:70px;height:70px;font-size:14px}
 #bd{right:calc(env(safe-area-inset-right) + 50px);bottom:118px;width:60px;height:60px;font-size:13px}
 #bpause{right:calc(env(safe-area-inset-right) + 10px);top:10px;width:40px;height:40px;font-size:14px;border-radius:10px}
-#bgod{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 6px);transform:translateX(-50%);padding:5px 12px;border-radius:8px;background:rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.4);color:#fff;font:bold 12px system-ui,sans-serif;z-index:5;cursor:pointer;touch-action:none;user-select:none}
-#bsel{position:fixed;left:calc(50% + 46px);bottom:calc(env(safe-area-inset-bottom) + 6px);padding:5px 12px;border-radius:8px;background:rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.4);color:#fff;font:bold 12px system-ui,sans-serif;z-index:5;cursor:pointer;touch-action:none;user-select:none}
-#bgod{transform:translateX(calc(-50% - 40px))!important}
+#toolb{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 6px);transform:translateX(-50%);display:flex;gap:8px;z-index:5}
+.tbtn{padding:5px 11px;border-radius:8px;background:rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.45);color:#fff;font:bold 12px system-ui,sans-serif;cursor:pointer;touch-action:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+#bgod.on{background:rgba(255,200,60,.7);border-color:#ffe45a;color:#1a1020}
+#bfs.on{background:rgba(120,220,255,.6);border-color:#8ae0ff;color:#0a1c28}
 #selp{position:fixed;inset:0;background:rgba(10,6,20,.88);display:none;z-index:20;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;padding:30px;align-content:center}
 #selp.on{display:flex}
 #selp button{font:bold 15px system-ui,sans-serif;padding:12px 16px;border-radius:10px;border:2px solid #ffe45a;background:#2a1c40;color:#fff;min-width:150px}
 #selp button.x{border-color:#888;background:#333}
-#bgod.on{background:rgba(255,200,60,.7);border-color:#ffe45a;color:#1a1020}
 #rot{position:fixed;inset:0;background:#141020;color:#ffe9a8;display:none;align-items:center;justify-content:center;text-align:center;font:bold 20px system-ui,sans-serif;padding:30px;z-index:9}
-@media (orientation:portrait){body.touch #bgod{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 6px);transform:translateX(-50%);padding:5px 12px;border-radius:8px;background:rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.4);color:#fff;font:bold 12px system-ui,sans-serif;z-index:5;cursor:pointer;touch-action:none;user-select:none}
-#bsel{position:fixed;left:calc(50% + 46px);bottom:calc(env(safe-area-inset-bottom) + 6px);padding:5px 12px;border-radius:8px;background:rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.4);color:#fff;font:bold 12px system-ui,sans-serif;z-index:5;cursor:pointer;touch-action:none;user-select:none}
-#bgod{transform:translateX(calc(-50% - 40px))!important}
-#selp{position:fixed;inset:0;background:rgba(10,6,20,.88);display:none;z-index:20;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;padding:30px;align-content:center}
-#selp.on{display:flex}
-#selp button{font:bold 15px system-ui,sans-serif;padding:12px 16px;border-radius:10px;border:2px solid #ffe45a;background:#2a1c40;color:#fff;min-width:150px}
-#selp button.x{border-color:#888;background:#333}
-#bgod.on{background:rgba(255,200,60,.7);border-color:#ffe45a;color:#1a1020}
+@media (orientation:portrait){
 #rot{display:flex}}
 </style>
 </head>
@@ -48,8 +45,11 @@ canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block;backg
   <div class="tb" id="bd" data-k="dash">DASH</div>
   <div class="tb" id="bpause" data-k="pause">❚❚</div>
 </div>
-<div id="bgod">GOD</div>
-<div id="bsel">FASES</div>
+<div id="toolb">
+  <div id="bfs" class="tbtn">⛶ CHEIA</div>
+  <div id="bgod" class="tbtn">GOD</div>
+  <div id="bsel" class="tbtn">FASES</div>
+</div>
 <div id="selp"></div>
 <div id="rot">🐜<br><br>Gire o celular para jogar na horizontal</div>
 <script>

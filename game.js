@@ -209,6 +209,25 @@ addEventListener('touchstart', () => { if (!document.body.classList.contains('to
       const c = document.createElement('button'); c.className = 'x'; c.textContent = 'FECHAR'; c.onclick = ev => { ev.stopPropagation(); sp.classList.remove('on'); }; sp.appendChild(c); sp.classList.add('on'); });
     sp.addEventListener('pointerdown', e => e.stopPropagation()); } }
 { const gb = document.getElementById('bgod'); if (gb) gb.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); audioInit(); toggleGod(); }); }
+function toggleFullscreen() {
+  const doc = document.documentElement;
+  const isFS = document.fullscreenElement || document.webkitFullscreenElement;
+  if (!isFS) {
+    const req = doc.requestFullscreen || doc.webkitRequestFullscreen;
+    if (req) req.call(doc).catch(() => {});
+    if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+  } else {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit) exit.call(document).catch(() => {});
+  }
+}
+{ const fb = document.getElementById('bfs');
+  if (fb) {
+    const upd = () => { const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement); fb.textContent = isFS ? '✕ TELA' : '⛶ CHEIA'; fb.classList.toggle('on', isFS); };
+    fb.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); audioInit(); toggleFullscreen(); });
+    document.addEventListener('fullscreenchange', upd); document.addEventListener('webkitfullscreenchange', upd);
+  }
+}
 document.querySelectorAll('.tb').forEach(b => {
   const k = b.dataset.k; const on = e => { e.preventDefault(); b.classList.add('on'); press(k); if (navigator.vibrate && k !== 'left' && k !== 'right') try { navigator.vibrate(8); } catch (_) { } };
   const off = e => { e.preventDefault(); b.classList.remove('on'); release(k); };
