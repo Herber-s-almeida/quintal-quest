@@ -229,36 +229,94 @@ function toggleFullscreen() {
   }
 }
 document.querySelectorAll('.tb').forEach(b => {
-  const k = b.dataset.k; const on = e => { e.preventDefault(); b.classList.add('on'); press(k); if (navigator.vibrate && k !== 'left' && k !== 'right') try { navigator.vibrate(8); } catch (_) { } };
-  const off = e => { e.preventDefault(); b.classList.remove('on'); release(k); };
-  b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
+  const k = b.dataset.k;
+  const on = e => {
+    e.preventDefault(); e.stopPropagation();
+    b.classList.add('on'); press(k);
+    if (navigator.vibrate && k !== 'left' && k !== 'right') try { navigator.vibrate(8); } catch (_) {}
+  };
+  const off = e => {
+    e.preventDefault(); e.stopPropagation();
+    b.classList.remove('on'); release(k);
+  };
+  b.addEventListener('touchstart', on, { passive: false });
+  b.addEventListener('touchend', off, { passive: false });
+  b.addEventListener('touchcancel', off, { passive: false });
+  b.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch') on(e); });
+  b.addEventListener('pointerup', e => { if (e.pointerType !== 'touch') off(e); });
 });
-// ---- analog stick (floating + follow, radial dead zone w/ remap, hysteresis) ----
+// ---- analog stick (fixed anchor per touch, native TouchEvent for iOS, no drifting center) ----
 const STK = { id: null, ax: 0, ay: 0, mag: 0 };
 (() => {
-  const zone = document.getElementById('stick'), base = document.getElementById('sbase'), knob = document.getElementById('sknob'); if (!zone) return;
-  let ox = 0, oy = 0; const R = 28, DZ = .14, ON = .2, OFF = .12;
-  const home = () => { base.style.left = ''; base.style.top = ''; knob.style.left = '50%'; knob.style.top = '50%'; base.classList.remove('on'); };
-  const setKey = (k, on) => { if (on && !K[k]) press(k); if (!on && K[k]) release(k); };
-  const setDir = () => {
-    // horizontal with hysteresis: switch instantly when crossing to the other side
-    const x = STK.ax, y = STK.ay;
-    const l = K.left ? x < -OFF : x < -ON, r = K.right ? x > OFF : x > ON;
-    setKey('left', l && !r); setKey('right', r && !l);
-    setKey('down', K.down ? y > .3 : y > .45); setKey('sup', K.sup ? y < -.3 : y < -.45);
+  const zone = document.getElementById('stick'), base = document.getElementById('sbase'), knob = document.getElementById('sknob');
+  if (!zone) return;
+  let ox = 0, oy = 0;
+  const R = 32, DZ = 0.16;
+  const home = () => {
+    base.style.left = ''; base.style.top = ''; knob.style.left = '50%'; knob.style.top = '50%'; base.classList.remove('on');
+    STK.id = null; STK.ax = 0; STK.ay = 0; STK.mag = 0;
+    release('left'); release('right'); release('down'); release('sup');
   };
-  const upd = (px, py) => {
-    let dx = px - ox, dy = py - oy; const d = Math.hypot(dx, dy);
-    if (d > R) { const k = (d - R) / d; ox += dx * k; oy += dy * k; dx = px - ox; dy = py - oy; base.style.left = ox + 'px'; base.style.top = oy + 'px'; }
-    const dd = Math.min(R, Math.hypot(dx, dy)); knob.style.left = (50 + dx / R * 30) + 'px'; knob.style.top = (50 + dy / R * 30) + 'px';
-    const n = dd / R, m = n < DZ ? 0 : (n - DZ) / (1 - DZ); const nx = dd ? dx / dd : 0, ny = dd ? dy / dd : 0;
-    STK.mag = m; STK.ax = nx * m; STK.ay = ny * m; setDir();
+  const setDir = (ax, ay) => {
+    if (ax < -0.18) { if (!K.left) press('left'); if (K.right) release('right'); }
+    else if (ax > 0.18) { if (!K.right) press('right'); if (K.left) release('left'); }
+    else { if (K.left) release('left'); if (K.right) release('right'); }
+    if (ay > 0.35) { if (!K.down) press('down'); } else { if (K.down) release('down'); }
+    if (ay < -0.35) { if (!K.sup) press('sup'); } else { if (K.sup) release('sup'); }
   };
-  const rel = (e) => { const r = zone.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-  zone.addEventListener('pointerdown', e => { e.preventDefault(); if (STK.id !== null) return; STK.id = e.pointerId; try { zone.setPointerCapture(e.pointerId); } catch (_) { } [ox, oy] = rel(e); base.style.left = ox + 'px'; base.style.top = oy + 'px'; base.classList.add('on'); upd(ox, oy); audioInit(); KP.tap = true; const cr = cv.getBoundingClientRect(); KP.tapX = (e.clientX - cr.left) / cr.width * W; KP.tapY = (e.clientY - cr.top) / cr.height * H; });
-  zone.addEventListener('pointermove', e => { if (e.pointerId !== STK.id) return; e.preventDefault(); const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : []; const last = evs.length ? evs[evs.length - 1] : e; const [x, y] = rel(last); upd(x, y); });
-  const end = e => { if (e.pointerId !== STK.id) return; STK.id = null; STK.ax = STK.ay = STK.mag = 0; setDir(); home(); };
-  zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end); zone.addEventListener('lostpointercapture', end);
+  const upd = (clientX, clientY) => {
+    const dx = clientX - ox, dy = clientY - oy;
+    const dist = Math.hypot(dx, dy);
+    const clampedDist = Math.min(R, dist);
+    const ang = dist > 0 ? Math.atan2(dy, dx) : 0;
+    const kx = Math.cos(ang) * clampedDist, ky = Math.sin(ang) * clampedDist;
+    knob.style.left = (36 + kx) + 'px'; knob.style.top = (36 + ky) + 'px';
+    const norm = clampedDist / R;
+    const mag = norm < DZ ? 0 : (norm - DZ) / (1 - DZ);
+    STK.mag = mag; STK.ax = (dist > 0 ? (dx / dist) : 0) * mag; STK.ay = (dist > 0 ? (dy / dist) : 0) * mag;
+    setDir(STK.ax, STK.ay);
+  };
+  const onTouchStart = e => {
+    e.preventDefault(); if (STK.id !== null) return;
+    const t = e.changedTouches[0]; STK.id = t.identifier;
+    const rect = zone.getBoundingClientRect();
+    ox = t.clientX; oy = t.clientY;
+    base.style.left = (ox - rect.left) + 'px'; base.style.top = (oy - rect.top) + 'px';
+    base.classList.add('on'); upd(ox, oy); audioInit();
+  };
+  const onTouchMove = e => {
+    if (STK.id === null) return; e.preventDefault();
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      const t = e.changedTouches[i];
+      if (t.identifier === STK.id) { upd(t.clientX, t.clientY); break; }
+    }
+  };
+  const onTouchEnd = e => {
+    if (STK.id === null) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === STK.id) { home(); break; }
+    }
+  };
+  zone.addEventListener('touchstart', onTouchStart, { passive: false });
+  window.addEventListener('touchmove', onTouchMove, { passive: false });
+  window.addEventListener('touchend', onTouchEnd, { passive: false });
+  window.addEventListener('touchcancel', home, { passive: false });
+
+  zone.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'touch') return;
+    e.preventDefault(); STK.id = 9999;
+    const rect = zone.getBoundingClientRect();
+    ox = e.clientX; oy = e.clientY;
+    base.style.left = (ox - rect.left) + 'px'; base.style.top = (oy - rect.top) + 'px';
+    base.classList.add('on'); upd(ox, oy); audioInit();
+  });
+  window.addEventListener('pointermove', e => {
+    if (e.pointerType === 'touch' || STK.id !== 9999) return;
+    upd(e.clientX, e.clientY);
+  });
+  window.addEventListener('pointerup', e => {
+    if (STK.id === 9999) home();
+  });
 })();
 cv.addEventListener('pointerdown', e => { audioInit(); KP.tap = true; const r = cv.getBoundingClientRect(); KP.tapX = (e.clientX - r.left) / r.width * W; KP.tapY = (e.clientY - r.top) / r.height * H; });
 function resize() {
@@ -553,7 +611,7 @@ function buildTheme(th) {
 function makeLevel(theme, len, build) {
   const grid = Array.from({ length: ROWS }, () => new Uint8Array(len));
   const L = {
-    theme, len, grid, enemies: [], sugar: [], nurses: [], flag: null, start: { x: 3, h: 3 }, deco: [],
+    theme, len, grid, enemies: [], sugar: [], nurses: [], flag: null, start: { x: 8, h: 3 }, deco: [],
     springs: [], checkpoints: [], babies: [], crumbs: [], switches: [], secrets: [],
     ground(x0, x1, h) { h += BASE; for (let x = x0; x < x1; x++) for (let y = ROWS - h; y < ROWS; y++) grid[y][x] = 1; },
     block(x0, w, hb, hh) { hb += BASE; for (let x = x0; x < x0 + w; x++) for (let y = ROWS - hb - hh; y < ROWS - hb; y++) grid[y][x] = 1; },
@@ -2080,6 +2138,7 @@ function hurtPlayer(fromX, dmg = 1) {
 }
 function updatePlayer(dt) {
   P.lock = (P.lock || 0) - dt; P.fallCD = (P.fallCD || 0) - dt;
+  if (isTouch && STK.id === null) { K.left = false; K.right = false; K.down = false; K.sup = false; }
   const ctl = P.ctrl && P.lock <= 0;
   const left = K.left && ctl, right = K.right && ctl;
   const wantJump = (KP.jump || KP.up) && ctl, wantPunch = KP.punch && P.ctrl, wantDash = KP.dash && P.ctrl;
